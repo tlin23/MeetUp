@@ -328,6 +328,7 @@ public class MapDisplayFragment extends Fragment {
                 return true;
             }
         } catch (NullPointerException e) {
+            
             createSimpleDialog("Either your schedule or your friend's schedule was not available. Please try again.").show();
         }
 
