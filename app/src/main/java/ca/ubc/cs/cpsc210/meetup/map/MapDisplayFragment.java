@@ -37,6 +37,7 @@ import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.SortedSet;
@@ -46,10 +47,8 @@ import ca.ubc.cs.cpsc210.meetup.R;
 import ca.ubc.cs.cpsc210.meetup.model.Building;
 import ca.ubc.cs.cpsc210.meetup.model.Course;
 import ca.ubc.cs.cpsc210.meetup.model.CourseFactory;
-import ca.ubc.cs.cpsc210.meetup.model.EatingPlace;
 import ca.ubc.cs.cpsc210.meetup.model.Place;
 import ca.ubc.cs.cpsc210.meetup.model.PlaceFactory;
-import ca.ubc.cs.cpsc210.meetup.model.Schedule;
 import ca.ubc.cs.cpsc210.meetup.model.Section;
 import ca.ubc.cs.cpsc210.meetup.model.Student;
 import ca.ubc.cs.cpsc210.meetup.model.StudentManager;
@@ -303,12 +302,13 @@ public class MapDisplayFragment extends Fragment {
 
         // CPSC 210 students: you must complete this method
         Log.d("", "Did I even click findMeetupPlace? Yes!");
+        Log.d("Can we meet?", Boolean.toString(canWeMeet(me,randomStudent)));
         // Determine if two students are available to meet
         if (canWeMeet(me, randomStudent)) {
             // use PlaceFactory to locate the places within the distance specified in the settings
-            showWhereWeCanMeet();
+            showWhereCanWeMeet(me, randomStudent);
         } else {
-            createSimpleDialog("Sorry, you guys aren't both free to meet at " + sharedPreferences.getString("timeOfDay", "12"));
+            createSimpleDialog("Sorry, one of you is not available to meet at " + sharedPreferences.getString("timeOfDay", "12")).show();
         };
     }
 
@@ -316,24 +316,78 @@ public class MapDisplayFragment extends Fragment {
         String settingDayOfWeek = sharedPreferences.getString("dayOfWeek", "MWF");
         String settingTimeOfDay = sharedPreferences.getString("timeOfDay", "12");
         // make sure me and random student are not null
+        try {
+            // Am I available at the given DayOfWeek/TimeOfDay?
+            Boolean amIFreeAtThisTime = me.getSchedule().amIAvailable(settingDayOfWeek, settingTimeOfDay);
 
-        // Am I available at the given DayOfWeek/TimeOfDay?
-        Boolean amIFreeAtThisTime = me.getSchedule().amIAvailable(settingDayOfWeek, settingTimeOfDay);
+            // Is randomStudent available at the given DayOfWeek/TimeOfDay?
+            Boolean isRandomFreeAtThisTime = randomStudent.getSchedule().amIAvailable(settingDayOfWeek, settingTimeOfDay);
 
-        // Is randomStudent available at the given DayOfWeek/TimeOfDay?
-        Boolean isRandomFreeAtThisTime = randomStudent.getSchedule().amIAvailable(settingDayOfWeek, settingTimeOfDay);
-
-        // if so return true
-        if (amIFreeAtThisTime && isRandomFreeAtThisTime) {
-            return true;
+            // if so return true
+            if (amIFreeAtThisTime && isRandomFreeAtThisTime) {
+                return true;
+            }
+        } catch (NullPointerException e) {
+            createSimpleDialog("Either your schedule or your friend's schedule was not available. Please try again.").show();
         }
+
+
         // if not, return false
         return false;
     }
 
-    private void showWhereWeCanMeet() {
-        Log.d("********", "We've reached showWhereWeCanMeet()!");
+    private void showWhereCanWeMeet(Student me, Student randomStudent) {
+        String settingDayOfWeek = sharedPreferences.getString("dayOfWeek", "MWF");
+        String settingTimeOfDay = sharedPreferences.getString("timeOfDay", "12");
+        String settingPlaceDistanceString = sharedPreferences.getString("placeDistance", "250");
+        int settingPlaceDistance = Integer.parseInt(settingPlaceDistanceString);
+        Set<Place> placesWithinDistanceForBoth = new HashSet<Place>();
 
+        // use PlaceFactory to locate the places within the given distance
+        Building whereWasI = me.getSchedule().whereAmI(settingDayOfWeek, settingTimeOfDay);
+        Building whereWasRandomStudent = randomStudent.getSchedule().whereAmI(settingDayOfWeek,settingTimeOfDay);
+
+        try {
+            Set<Place> placesWithinDistanceForMe = PlaceFactory.getInstance().findPlacesWithinDistance(whereWasI.getLatLon(), settingPlaceDistance);
+
+            for (Place aPlace : placesWithinDistanceForMe) {
+                int distanceBetweenRSandPlace = (int) LatLon.distanceBetweenTwoLatLon(whereWasRandomStudent.getLatLon(), aPlace.getLatLon());
+                if (distanceBetweenRSandPlace <= settingPlaceDistance) {
+                    placesWithinDistanceForBoth.add(aPlace);
+                }
+            }
+        } catch (NullPointerException e) {
+            createSimpleDialog("One of you is not on campus yet at the given time").show();
+        }
+        // plot those buildings
+        // make sure their info pops up when they're clicked
+        Log.d("", "We've reached plotting these buildings!");
+        Log.d("", Boolean.toString(placesWithinDistanceForBoth.isEmpty()));
+        if (placesWithinDistanceForBoth.isEmpty()) {
+            createSimpleDialog("Oops! There is nowhere to meet. Please check your settings and try again").show();
+        }
+        for (Place aPlace: placesWithinDistanceForBoth) {
+            plotAPlace(aPlace, aPlace.getName(), "", R.drawable.ic_action_event);
+        }
+
+    }
+
+    private void plotAPlace(Place place, String title, String msg, int drawableToUse) {
+        // Caution: You copied this from plotABuilding()
+        OverlayItem buildingItem = new OverlayItem(title, msg,
+                new GeoPoint(place.getLatLon().getLatitude(), place.getLatLon().getLongitude()));
+
+        //Create new marker
+        Drawable icon = this.getResources().getDrawable(drawableToUse);
+
+        //Set the bounding for the drawable
+        icon.setBounds(
+                0 - icon.getIntrinsicWidth() / 2, 0 - icon.getIntrinsicHeight(),
+                icon.getIntrinsicWidth() / 2, 0);
+
+        //Set the new marker to the overlay
+        buildingItem.setMarker(icon);
+        buildingOverlay.addItem(buildingItem);
     }
 
 
@@ -536,8 +590,8 @@ public class MapDisplayFragment extends Fragment {
             // the onPostExecute method below.
 
             // get a random student from webservice
-            // String input = getStudentURL;
-            String input = "http://kramer.nss.cs.ubc.ca:8081/getStudentById/555555";
+            String input = getStudentURL;
+            // String input = "http://kramer.nss.cs.ubc.ca:8081/getStudentById/555555";
             // parse the JSON string and create a student
             try {
                 String output = makeRoutingCall(input);
