@@ -224,6 +224,7 @@ public class MapDisplayFragment extends Fragment {
             outState.putInt("latE6", cntr.getLatitudeE6());
             outState.putInt("lonE6", cntr.getLongitudeE6());
             Log.i("MapSave", "Zoom: " + mapView.getZoomLevel());
+
         }
     }
 
