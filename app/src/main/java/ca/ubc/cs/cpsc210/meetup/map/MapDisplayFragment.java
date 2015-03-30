@@ -236,8 +236,7 @@ public class MapDisplayFragment extends Fragment {
      */
     public void showMySchedule() {
         clearSchedules();
-        initializeMySchedule();
-        SortedSet<Section> mySections = studentManager.get(14558143).getSchedule().getSections(sharedPreferences.getString("dayOfWeek", ""));
+        SortedSet<Section> mySections = me.getSchedule().getSections(sharedPreferences.getString("dayOfWeek", ""));
         SchedulePlot mySchedulePlot = new SchedulePlot(mySections, "Terry Lin", "#420360", 1);
         Log.i("showMySchedule()", Boolean.toString(mySchedulePlot.getSections().isEmpty()));
 
@@ -303,9 +302,40 @@ public class MapDisplayFragment extends Fragment {
     public void findMeetupPlace() {
 
         // CPSC 210 students: you must complete this method
-
-        
+        Log.d("", "Did I even click findMeetupPlace? Yes!");
+        // Determine if two students are available to meet
+        if (canWeMeet(me, randomStudent)) {
+            // use PlaceFactory to locate the places within the distance specified in the settings
+            showWhereWeCanMeet();
+        } else {
+            createSimpleDialog("Sorry, you guys aren't both free to meet at " + sharedPreferences.getString("timeOfDay", "12"));
+        };
     }
+
+    private boolean canWeMeet(Student me, Student randomStudent) {
+        String settingDayOfWeek = sharedPreferences.getString("dayOfWeek", "MWF");
+        String settingTimeOfDay = sharedPreferences.getString("timeOfDay", "12");
+        // make sure me and random student are not null
+
+        // Am I available at the given DayOfWeek/TimeOfDay?
+        Boolean amIFreeAtThisTime = me.getSchedule().amIAvailable(settingDayOfWeek, settingTimeOfDay);
+
+        // Is randomStudent available at the given DayOfWeek/TimeOfDay?
+        Boolean isRandomFreeAtThisTime = randomStudent.getSchedule().amIAvailable(settingDayOfWeek, settingTimeOfDay);
+
+        // if so return true
+        if (amIFreeAtThisTime && isRandomFreeAtThisTime) {
+            return true;
+        }
+        // if not, return false
+        return false;
+    }
+
+    private void showWhereWeCanMeet() {
+        Log.d("********", "We've reached showWhereWeCanMeet()!");
+
+    }
+
 
     /**
      * Initialize the PlaceFactory with information from FourSquare
@@ -387,6 +417,7 @@ public class MapDisplayFragment extends Fragment {
         // "TF"
         studentManager.addSectionToSchedule(14558143, "MATH", 221, "202"); // 11~1220 Klinck
         studentManager.addSectionToSchedule(14558143, "BIOL", 201, "201"); // 14~1520 BIOSCI
+        me = studentManager.get(14558143);
     }
 
     /**
@@ -505,8 +536,8 @@ public class MapDisplayFragment extends Fragment {
             // the onPostExecute method below.
 
             // get a random student from webservice
-            String input = getStudentURL;
-            // String input = "http://kramer.nss.cs.ubc.ca:8081/getStudentById/222222";
+            // String input = getStudentURL;
+            String input = "http://kramer.nss.cs.ubc.ca:8081/getStudentById/555555";
             // parse the JSON string and create a student
             try {
                 String output = makeRoutingCall(input);
@@ -631,7 +662,7 @@ public class MapDisplayFragment extends Fragment {
             // use createSimpleDialog(String msg) for alert.
             Log.d("What's yo route size playa?", Integer.toString(schedulePlot.getRoute().size()));
             if (schedulePlot.getRoute().size() == 0) {
-                createSimpleDialog("Sorry an error has occurred. There is no route to plot.").show();
+                createSimpleDialog("There was no route to plot. Please try again").show();
             }
 
             plotBuildings(schedulePlot);
@@ -662,10 +693,10 @@ public class MapDisplayFragment extends Fragment {
             // of JSON from FourSquare. Return the string from this method
             String clientID = "IJBLQ1BMYDV14STSLMQW1SPX5PA30QGMV1JBMQOEH2TASSKD";
             String clientSecret = "2ZA21THZETFCJTSI0LSR2JKQ3TPEXQZQG5Z2RLAXUIUFQ54Z";
-            String lat;
-            String lon;
+            String radius = sharedPreferences.getString("placeDistance", "250");
+            Log.d("Radius", sharedPreferences.getString("placeDistance", "250"));
             // make url (lat and lon were picked arbitrarily; within 1km radius; food places only; version 20150326 (date this url was made))
-            String url = "https://api.foursquare.com/v2/venues/explore?ll=49.262523,-123.253807&radius=1000&section=food&client_secret=" + clientSecret + "&client_id=" + clientID + "&v=20150326";
+            String url = "https://api.foursquare.com/v2/venues/explore?ll=49.262523,-123.253807&radius=" + radius + "&section=food&client_secret=" + clientSecret + "&client_id=" + clientID + "&v=20150326";
             Log.d("", url);
             // make call
             try {

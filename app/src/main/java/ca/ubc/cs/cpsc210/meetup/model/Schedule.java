@@ -1,5 +1,7 @@
 package ca.ubc.cs.cpsc210.meetup.model;
 
+import android.util.Log;
+
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -172,5 +174,38 @@ public class Schedule {
 		else
 			return TRSections;
 	}
+
+    public boolean amIAvailable(String dayOfWeek, String timeOfDay) {
+
+        int timeOfDayInMin = Integer.parseInt(timeOfDay) * 60;
+        Log.d("Given Time of Day", Integer.toString(timeOfDayInMin));
+
+        Log.d("***************", this.getSections(dayOfWeek).first().getCourseTime().getStartTime());
+        int timeOfMyFirstClass = calculateMinutesIntoDay(this.getSections(dayOfWeek).first().getCourseTime().getStartTime());
+        Log.d("Time of My First Class", Integer.toString(timeOfMyFirstClass));
+
+        int timeOfMyLastClass = calculateMinutesIntoDay(this.getSections(dayOfWeek).last().getCourseTime().getEndTime());
+        Log.d("Time of My Last Class", Integer.toString(timeOfMyLastClass));
+
+        Set<String> myBreaksStartTimes = getStartTimesOfBreaks(dayOfWeek);
+
+        if (timeOfDayInMin <= timeOfMyFirstClass - 60) {
+            //I should be free at least hour before my first class
+            return true;
+        } else if (timeOfDayInMin >= timeOfMyLastClass) {
+            //I should be free right after my last class
+            return true;
+        }
+
+        //I should be free if I have at least an hour between two classes
+        for (String aBreakStart : myBreaksStartTimes) {
+            int aBreakInMin = calculateMinutesIntoDay(aBreakStart);
+            if (aBreakInMin >= timeOfDayInMin - 60
+                    && aBreakInMin <= timeOfDayInMin) {
+                return true;
+            }
+        }
+        return false;
+    }
 
 }
