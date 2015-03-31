@@ -3,12 +3,15 @@ package ca.ubc.cs.cpsc210.meetup.map;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.Fragment;
+import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.drawable.Drawable;
+import android.location.LocationListener;
+import android.location.LocationManager;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
@@ -23,6 +26,7 @@ import org.osmdroid.api.IGeoPoint;
 import org.osmdroid.api.IMapController;
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory;
 import org.osmdroid.util.GeoPoint;
+import org.osmdroid.views.MapController;
 import org.osmdroid.views.MapView;
 import org.osmdroid.views.overlay.ItemizedIconOverlay;
 import org.osmdroid.views.overlay.OverlayItem;
@@ -313,6 +317,59 @@ public class MapDisplayFragment extends Fragment {
         };
     }
 
+    public void findWithGPS() {
+        //Bonus 1
+        Log.d("Reached findWithGPS", "Yes!");
+        if (canWeMeet(me, randomStudent)) {
+            showWhereWithGPS(me, randomStudent);
+        } else {
+            createSimpleDialog("Sorry, one of you is not available to meet at " + sharedPreferences.getString("timeOfDay", "12")).show();
+        }
+
+
+        //Bonus 1
+    }
+
+    private void showWhereWithGPS(Student me, Student randomStudent) {
+        String settingDayOfWeek = sharedPreferences.getString("dayOfWeek", "MWF");
+        String settingTimeOfDay = sharedPreferences.getString("timeOfDay", "12");
+        String settingPlaceDistanceString = sharedPreferences.getString("placeDistance", "250");
+        int settingPlaceDistance = Integer.parseInt(settingPlaceDistanceString);
+        Set<Place> placesWithinDistanceForBoth = new HashSet<Place>();
+
+        MyCurrentLocationListener myCurrentLocationListener = new MyCurrentLocationListener();
+
+        LatLon whereWasI = new LatLon(myCurrentLocationListener.getMyLat(), myCurrentLocationListener.getMyLon());
+        String myLocation = "Lat = " + Double.toString(myCurrentLocationListener.getMyLat()) + "\nLon = " + Double.toString(myCurrentLocationListener.getMyLon());
+        Log.d("My location is ", myLocation);
+        //Where was I needs to be taken from the current GPS location
+
+        Building whereWasRandomStudent = randomStudent.getSchedule().whereAmI(settingDayOfWeek,settingTimeOfDay);
+
+        try {
+            Set<Place> placesWithinDistanceForMe = PlaceFactory.getInstance().findPlacesWithinDistance(whereWasI, settingPlaceDistance);
+
+            for (Place aPlace : placesWithinDistanceForMe) {
+                int distanceBetweenRSandPlace = (int) LatLon.distanceBetweenTwoLatLon(whereWasRandomStudent.getLatLon(), aPlace.getLatLon());
+                if (distanceBetweenRSandPlace <= settingPlaceDistance) {
+                    placesWithinDistanceForBoth.add(aPlace);
+                }
+            }
+        } catch (NullPointerException e) {
+            createSimpleDialog("One of you is not on campus yet at the given time").show();
+        }
+        // plot those buildings
+        // make sure their info pops up when they're clicked
+        Log.d("", "We've reached plotting these buildings!");
+        Log.d("", Boolean.toString(placesWithinDistanceForBoth.isEmpty()));
+        if (placesWithinDistanceForBoth.isEmpty()) {
+            createSimpleDialog("Oops! There is nowhere to meet. Please check your settings and try again").show();
+        }
+        for (Place aPlace: placesWithinDistanceForBoth) {
+            plotAPlace(aPlace, aPlace.getName(), "", R.drawable.ic_action_event);
+        }
+    }
+
     private boolean canWeMeet(Student me, Student randomStudent) {
         String settingDayOfWeek = sharedPreferences.getString("dayOfWeek", "MWF");
         String settingTimeOfDay = sharedPreferences.getString("timeOfDay", "12");
@@ -373,6 +430,8 @@ public class MapDisplayFragment extends Fragment {
         }
 
     }
+
+
 
     private void plotAPlace(Place place, String title, String msg, int drawableToUse) {
         // Caution: You copied this from plotABuilding()
@@ -560,7 +619,9 @@ public class MapDisplayFragment extends Fragment {
     }
 
 
-   // *********************** Asynchronous tasks
+
+
+    // *********************** Asynchronous tasks
 
     /**
      * This asynchronous task is responsible for contacting the Meetup web service
