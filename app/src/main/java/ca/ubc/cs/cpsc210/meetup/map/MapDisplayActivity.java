@@ -135,6 +135,7 @@ public class MapDisplayActivity extends Activity {
         sideDrawerMenu.closeDrawer(sideDrawerMenuList);
     }
 
+    
     private BaseAdapter SideDrawerItemAdapter = new BaseAdapter() {
 
         @Override
