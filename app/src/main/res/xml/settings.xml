@@ -23,4 +23,13 @@
             android:defaultValue="closest_stop_me"
             android:summary="Set how close of the meetup place should be"
             android:title="Place Distance Options" />
+
+        <ListPreference
+            android:entries="@array/typeOfPlace"
+            android:entryValues="@array/typeOfPlaceValues"
+            android:key="typeOfPlace"
+            android:defaultValue="food"
+            android:summary="The type of place to meet up"
+            android:title="Type of Place" />
+
 </PreferenceScreen>

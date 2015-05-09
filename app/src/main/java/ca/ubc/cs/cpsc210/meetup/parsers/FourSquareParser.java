@@ -1,5 +1,7 @@
 package ca.ubc.cs.cpsc210.meetup.parsers;
 
+import android.util.Log;
+
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -27,6 +29,7 @@ public class FourSquareParser {
                 JSONObject group = groups.getJSONObject(i);
                 JSONArray items = group.getJSONArray("items");
                 for (int j = 0; j < items.length(); j++) {
+                    //Parse the eatingPlace
                     JSONObject item = items.getJSONObject(j);
                     JSONObject venue = item.getJSONObject("venue");
                     String name = venue.getString("name");
@@ -34,8 +37,19 @@ public class FourSquareParser {
                     Double lat = location.getDouble("lat");
                     Double lon = location.getDouble("lng");
                     LatLon latlon = new LatLon(lat,lon);
-                    EatingPlace eatingPlace = new EatingPlace(name, latlon);
+
+                    // For Bonus
+                    JSONArray tips = item.getJSONArray("tips");
+                    JSONObject tip = tips.getJSONObject(0);
+                    String review = tip.getString("text");
+                    Log.d("Can I get the review?????????????????", review);
+                    // For Bonus
+
+                    EatingPlace eatingPlace = new EatingPlace(name, latlon, review);
                     PlaceFactory.getInstance().add(eatingPlace);
+
+
+
                 }
             }
 

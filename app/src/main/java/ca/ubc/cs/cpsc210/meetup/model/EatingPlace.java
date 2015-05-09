@@ -25,4 +25,8 @@ public class EatingPlace extends Place {
     public EatingPlace(String name) {
         this(name, new LatLon());
     }
+
+    public EatingPlace(String name, LatLon latlon, String review) {
+        super(name, latlon, review);
+    }
 }

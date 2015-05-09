@@ -38,4 +38,25 @@
         <item name="1000">1000</item>
         <item name="2000">2000</item>
     </string-array>
+
+    <string-array name="typeOfPlace">
+        <item name ="Food">Food</item>
+        <item name ="Drinks">Drinks</item>
+        <item name ="Top Picks">Top Picks</item>
+        <item name ="Coffee">Coffee</item>
+        <item name ="Shops">Shops</item>
+        <item name ="Arts">Arts</item>
+        <item name ="Outdoors">Outdoors</item>
+    </string-array>
+
+    <string-array name="typeOfPlaceValues">
+        <item name ="Food">food</item>
+        <item name ="Drinks">drinks</item>
+        <item name ="Top Picks">topPicks</item>
+        <item name ="Coffee">coffee</item>
+        <item name ="Shops">shops</item>
+        <item name ="Arts">arts</item>
+        <item name ="Outdoors">outdoors</item>
+    </string-array>
+
 </resources>

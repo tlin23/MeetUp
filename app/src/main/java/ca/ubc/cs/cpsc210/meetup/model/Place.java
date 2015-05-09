@@ -19,6 +19,9 @@ public class Place extends Location {
     // Tags describing place
     private Set<String> tags;
 
+    // The review for a place
+    private String review;
+
     /**
      * Constructor
      * @param placeName tThe name of the place
@@ -37,6 +40,19 @@ public class Place extends Location {
         name = placeName;
         displayText = placeName;
         tags = new HashSet<String>();
+    }
+
+    public Place(String placeName, LatLon latLon, String review) {
+        super(latLon);
+        name = placeName;
+        displayText = placeName;
+        this.review = review;
+        tags = new HashSet<String>();
+
+    }
+
+    public String getReview() {
+        return review;
     }
 
 

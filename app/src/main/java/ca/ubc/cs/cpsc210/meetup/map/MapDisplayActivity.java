@@ -5,6 +5,7 @@ import android.app.FragmentTransaction;
 import android.content.Context;
 import android.content.Intent;
 import android.content.res.Configuration;
+import android.location.LocationListener;
 import android.location.LocationManager;
 import android.os.Bundle;
 import android.support.v4.widget.DrawerLayout;
@@ -20,6 +21,7 @@ import android.widget.ListView;
 import android.widget.TextView;
 
 import ca.ubc.cs.cpsc210.meetup.R;
+import ca.ubc.cs.cpsc210.meetup.util.LatLon;
 import ca.ubc.cs.cpsc210.meetup.util.SettingsActivity;
 
 /**
@@ -35,10 +37,8 @@ public class MapDisplayActivity extends Activity {
      */
     private final static String LOG_TAG = "MapDisplayActivity";
 
-
     private String[] menuItems = {"Clear", "Show My Schedule", "Get Random Schedule", "Find Meetup Place",
             "Get Places", "Settings", "Find w/ GPS"};
-
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -68,14 +68,7 @@ public class MapDisplayActivity extends Activity {
         getActionBar().setDisplayHomeAsUpEnabled(true);
         getActionBar().setIcon(android.R.color.transparent);
 
-
-        // GPS LocationListener
-        LocationManager locationManager = (LocationManager)getSystemService(Context.LOCATION_SERVICE);
-
-        MyCurrentLocationListener locationListener = new MyCurrentLocationListener();
-
-        locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 0, 0, locationListener);
-    }
+}
 
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
@@ -129,8 +122,11 @@ public class MapDisplayActivity extends Activity {
                 break;
             case 6:
                 // Find w/ GPS
+                // GPS LocationListener
+                LocationManager locationManager = (LocationManager)getSystemService(Context.LOCATION_SERVICE);
+
                 Log.d(LOG_TAG, "Find w/ GPS");
-                fragment.findWithGPS();
+                fragment.findWithGPS(locationManager);
                 break;
         }
 

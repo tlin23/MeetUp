@@ -10,6 +10,7 @@ import android.content.SharedPreferences;
 import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.drawable.Drawable;
+import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
 import android.os.AsyncTask;
@@ -317,11 +318,11 @@ public class MapDisplayFragment extends Fragment {
         };
     }
 
-    public void findWithGPS() {
+    public void findWithGPS(LocationManager locationManager) {
         //Bonus 1
         Log.d("Reached findWithGPS", "Yes!");
         if (canWeMeet(me, randomStudent)) {
-            showWhereWithGPS(me, randomStudent);
+            showWhereWithGPS(locationManager, randomStudent);
         } else {
             createSimpleDialog("Sorry, one of you is not available to meet at " + sharedPreferences.getString("timeOfDay", "12")).show();
         }
@@ -330,17 +331,20 @@ public class MapDisplayFragment extends Fragment {
         //Bonus 1
     }
 
-    private void showWhereWithGPS(Student me, Student randomStudent) {
+    private void showWhereWithGPS(LocationManager locationManager, Student randomStudent) {
         String settingDayOfWeek = sharedPreferences.getString("dayOfWeek", "MWF");
         String settingTimeOfDay = sharedPreferences.getString("timeOfDay", "12");
         String settingPlaceDistanceString = sharedPreferences.getString("placeDistance", "250");
         int settingPlaceDistance = Integer.parseInt(settingPlaceDistanceString);
         Set<Place> placesWithinDistanceForBoth = new HashSet<Place>();
 
+        LocationManager myLocationManager = locationManager;
         MyCurrentLocationListener myCurrentLocationListener = new MyCurrentLocationListener();
+        locationManager.requestLocationUpdates(locationManager.GPS_PROVIDER, 0, 0, myCurrentLocationListener);
+        Location lastKnownLocation = locationManager.getLastKnownLocation(locationManager.GPS_PROVIDER);
 
-        LatLon whereWasI = new LatLon(myCurrentLocationListener.getMyLat(), myCurrentLocationListener.getMyLon());
-        String myLocation = "Lat = " + Double.toString(myCurrentLocationListener.getMyLat()) + "\nLon = " + Double.toString(myCurrentLocationListener.getMyLon());
+        LatLon whereWasI = new LatLon(lastKnownLocation.getLatitude(),lastKnownLocation.getLongitude());
+        String myLocation = "Lat = " + Double.toString(myCurrentLocationListener.getMyLat()) + "\nLon = " + Double.toString( myCurrentLocationListener.getMyLon());
         Log.d("My location is ", myLocation);
         //Where was I needs to be taken from the current GPS location
 
@@ -355,6 +359,7 @@ public class MapDisplayFragment extends Fragment {
                     placesWithinDistanceForBoth.add(aPlace);
                 }
             }
+
         } catch (NullPointerException e) {
             createSimpleDialog("One of you is not on campus yet at the given time").show();
         }
@@ -364,10 +369,39 @@ public class MapDisplayFragment extends Fragment {
         Log.d("", Boolean.toString(placesWithinDistanceForBoth.isEmpty()));
         if (placesWithinDistanceForBoth.isEmpty()) {
             createSimpleDialog("Oops! There is nowhere to meet. Please check your settings and try again").show();
+        } else {
+            for (Place aPlace: placesWithinDistanceForBoth) {
+                plotAPlace(aPlace, aPlace.getName(), aPlace.getReview(), R.drawable.ic_action_event);
+                Log.d("What is the review?", aPlace.getReview());
+            }
+
+
+
+            // Get the closest place to the GPS location
+            ArrayList<Place> listOfPlacesWithinDistanceForBoth = new ArrayList<Place>(placesWithinDistanceForBoth);
+
+
+            Place closestPlace = listOfPlacesWithinDistanceForBoth.get(0);
+            for(Place aPlace : listOfPlacesWithinDistanceForBoth) {
+                if (LatLon.distanceBetweenTwoLatLon(whereWasI, aPlace.getLatLon()) <= LatLon.distanceBetweenTwoLatLon(whereWasI, closestPlace.getLatLon())) {
+                    closestPlace = aPlace;
+                }
+            }
+
+            ArrayList<LatLon> twoLatLonsToPlot = new ArrayList<LatLon>();
+            twoLatLonsToPlot.add(whereWasI);
+            twoLatLonsToPlot.add(closestPlace.getLatLon());
+
+            // Plot a route between the closest location and the GPS location
+            new GetRoutingForClosestLoc().execute(twoLatLonsToPlot);
+
+            //************************************************************
+            //You've passed twoLatLonsToPlot now go to GetRoutingForClosestLoc and plot a route
+            //use GetRoutingForSchedule as a reference
+
+
         }
-        for (Place aPlace: placesWithinDistanceForBoth) {
-            plotAPlace(aPlace, aPlace.getName(), "", R.drawable.ic_action_event);
-        }
+
     }
 
     private boolean canWeMeet(Student me, Student randomStudent) {
@@ -424,9 +458,10 @@ public class MapDisplayFragment extends Fragment {
         Log.d("", Boolean.toString(placesWithinDistanceForBoth.isEmpty()));
         if (placesWithinDistanceForBoth.isEmpty()) {
             createSimpleDialog("Oops! There is nowhere to meet. Please check your settings and try again").show();
-        }
-        for (Place aPlace: placesWithinDistanceForBoth) {
-            plotAPlace(aPlace, aPlace.getName(), "", R.drawable.ic_action_event);
+        } else {
+            for (Place aPlace: placesWithinDistanceForBoth) {
+                plotAPlace(aPlace, aPlace.getName(), aPlace.getReview(), R.drawable.ic_action_event);
+            }
         }
 
     }
@@ -811,10 +846,15 @@ public class MapDisplayFragment extends Fragment {
             String clientID = "IJBLQ1BMYDV14STSLMQW1SPX5PA30QGMV1JBMQOEH2TASSKD";
             String clientSecret = "2ZA21THZETFCJTSI0LSR2JKQ3TPEXQZQG5Z2RLAXUIUFQ54Z";
             String radius = sharedPreferences.getString("placeDistance", "250");
+
+            // Bonus
+            String typeOfPlace = sharedPreferences.getString("typeOfPlace","");
+
             Log.d("Radius", sharedPreferences.getString("placeDistance", "250"));
             // make url (lat and lon were picked arbitrarily; within 1km radius; food places only; version 20150326 (date this url was made))
-            String url = "https://api.foursquare.com/v2/venues/explore?ll=49.262523,-123.253807&radius=" + radius + "&section=food&client_secret=" + clientSecret + "&client_id=" + clientID + "&v=20150326";
-            Log.d("", url);
+            String url = "https://api.foursquare.com/v2/venues/explore?ll=49.262523,-123.253807&radius=" + radius + "&section=" + typeOfPlace + "&client_secret=" + clientSecret + "&client_id=" + clientID + "&v=20150326";
+
+            Log.d("MapQuest Url Request String********", url);
             // make call
             try {
                 String output = makeRoutingCall(url);
@@ -856,6 +896,87 @@ public class MapDisplayFragment extends Fragment {
             return returnString;
         }
     }
+
+
+
+
+
+    private class GetRoutingForClosestLoc extends AsyncTask<ArrayList<LatLon>, Void, List<GeoPoint>> {
+
+        @Override
+        protected void onPreExecute() {
+        }
+
+        @Override
+        protected List<GeoPoint> doInBackground(ArrayList<LatLon>... params) {
+
+            List<GeoPoint> geoPointList = new ArrayList<GeoPoint>();
+
+            LatLon startLatLon = params[0].get(0);
+            LatLon endLatLon = params[0].get(1);
+
+            String appKey = "Fmjtd%7Cluu82lutnh%2C2n%3Do5-948a10";
+            String start = Double.toString(startLatLon.getLatitude()) + "," + Double.toString(startLatLon.getLongitude());
+            String end = Double.toString(endLatLon.getLatitude()) + "," + Double.toString(endLatLon.getLongitude());
+            String urlRequest = "http://open.mapquestapi.com/directions/v2/route?key=" + appKey + "&from=" + start + "&to=" + end + "&routeType=pedestrian";
+            String response;
+
+            try {
+                // Make the routing call
+                response = makeRoutingCall(urlRequest);
+                // parse response
+                MapQuestParser mapQuestParser = new MapQuestParser();
+                geoPointList.addAll(mapQuestParser.parse(response));
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+
+            return geoPointList;
+        }
+
+
+        private String makeRoutingCall(String httpRequest) throws MalformedURLException, IOException {
+            URL url = new URL(httpRequest);
+            HttpURLConnection client = (HttpURLConnection) url.openConnection();
+            InputStream in = client.getInputStream();
+            BufferedReader br = new BufferedReader(new InputStreamReader(in));
+            String returnString = br.readLine();
+            client.disconnect();
+            return returnString;
+        }
+
+
+        @Override
+        protected void onPostExecute(List<GeoPoint> geoPointList) {
+
+            Log.d("What's yo route size playa?", Integer.toString(geoPointList.size()));
+            if (geoPointList.size() == 0) {
+                createSimpleDialog("There was no route to plot. Please try again").show();
+            }
+
+            // To actually make something show on the map, you can use overlays.
+            // For instance, the following code should show a line on a map
+            PathOverlay po = createPathOverlay("#000000");
+            for (int i = 0; i < geoPointList.size(); i++) {
+                po.addPoint(geoPointList.get(i));
+            }
+            scheduleOverlay.add(po);
+            OverlayManager om = mapView.getOverlayManager();
+            om.addAll(scheduleOverlay);
+            mapView.invalidate(); // cause map to redraw
+        }
+
+
+    }
+
+
+
+
+
+
+
+
+
 
     /**
      * Initialize the CourseFactory with some courses.
@@ -952,5 +1073,6 @@ public class MapDisplayFragment extends Fragment {
         biol201.addSection(aSection);
         aSection.setCourse(biol201);
     }
+
 
 }
